@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>Arduino Radar</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #050b10;
+  color: #eafff7;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  width: min(1400px, 100%);
+  margin: auto;
+  padding: 20px;
+}
+
+/* HEADER */
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.logo span {
+  color: #00ff9d;
+}
+
+.connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff4055;
+}
+
+.dot.connected {
+  background: #00ff9d;
+  box-shadow: 0 0 15px #00ff9d;
+}
+
+/* CONTROLS */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  background: #0b161e;
+
+  border: 1px solid #19313c;
+
+  border-radius: 12px;
+
+  padding: 12px;
+
+  margin-bottom: 15px;
+}
+
+button {
+  padding: 10px 16px;
+
+  border: none;
+
+  border-radius: 7px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+}
+
+#connect {
+  background: #00ff9d;
+  color: #00140d;
+}
+
+#disconnect {
+  background: #182832;
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+label {
+  color: #79929c;
+  font-size: 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+input,
+select {
+  background: #101f28;
+  color: white;
+
+  border: 1px solid #28414c;
+
+  border-radius: 6px;
+
+  padding: 8px;
+}
+
+/* MAIN */
+
+main {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    280px;
+
+  gap: 15px;
+}
+
+.radar-box,
+.panel {
+  background: #0b161e;
+
+  border: 1px solid #19313c;
+
+  border-radius: 12px;
+}
+
+.radar-box {
+  overflow: hidden;
+}
+
+.radar-title {
+  display: flex;
+
+  justify-content: space-between;
+
+  padding: 15px;
+
+  border-bottom: 1px solid #19313c;
+}
+
+.radar-title h2 {
+  margin: 0;
+
+  font-size: 14px;
+}
+
+#scanState {
+  color: #00ff9d;
+
+  font-size: 10px;
+
+  font-weight: bold;
+}
+
+.canvas-container {
+  height: 620px;
+}
+
+canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+}
+
+/* PANEL */
+
+.sidebar {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+}
+
+.panel {
+  padding: 15px;
+}
+
+.panel h3 {
+  margin: 0 0 12px;
+
+  color: #77909a;
+
+  font-size: 11px;
+
+  letter-spacing: 2px;
+}
+
+.value {
+  background: #101f28;
+
+  border-radius: 7px;
+
+  padding: 10px;
+
+  margin-bottom: 7px;
+}
+
+.value small {
+  display: block;
+
+  color: #77909a;
+
+  font-size: 9px;
+}
+
+.value strong {
+  display: block;
+
+  margin-top: 4px;
+
+  font-size: 22px;
+}
+
+.green {
+  color: #00ff9d;
+}
+
+.red {
+  color: #ff4055;
+}
+
+.hardware-row {
+  display: flex;
+
+  justify-content: space-between;
+
+  padding: 6px 0;
+
+  color: #78919b;
+
+  font-size: 12px;
+}
+
+.hardware-row b {
+  color: white;
+}
+
+/* LOG */
+
+#log {
+  height: 120px;
+
+  overflow-y: auto;
+
+  background: #050b10;
+
+  border-radius: 6px;
+
+  padding: 8px;
+
+  font-family: monospace;
+
+  font-size: 10px;
+
+  color: #7d9ca7;
+}
+
+.log-error {
+  color: #ff4055;
+}
+
+.log-ok {
+  color: #00ff9d;
+}
+
+/* FOOTER */
+
+footer {
+  display: flex;
+
+  justify-content: space-between;
+
+  margin-top: 12px;
+
+  color: #506872;
+
+  font-size: 10px;
+}
+
+/* MOBILE */
+
+@media (max-width: 850px) {
+
+  main {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-container {
+    height: 500px;
+  }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+
+  <div class="logo">
+    <span>●</span> ARDUINO RADAR
+  </div>
+
+  <div class="connection">
+
+    <div
+      id="connectionDot"
+      class="dot"
+    ></div>
+
+    <span id="connectionText">
+      DISCONNECTED
+    </span>
+
+  </div>
+
+</header>
+
+
+<section class="controls">
+
+  <button id="connect">
+    CONNECT ARDUINO
+  </button>
+
+  <button
+    id="disconnect"
+    disabled
+  >
+    DISCONNECT
+  </button>
+
+  <label>
+
+    Detection:
+
+    <input
+      id="threshold"
+      type="number"
+      value="50"
+      min="5"
+      max="400"
+    >
+
+    cm
+
+  </label>
+
+  <label>
+
+    Range:
+
+    <select id="maxRange">
+
+      <option value="100">
+        100 cm
+      </option>
+
+      <option value="200" selected>
+        200 cm
+      </option>
+
+      <option value="300">
+        300 cm
+      </option>
+
+      <option value="400">
+        400 cm
+      </option>
+
+    </select>
+
+  </label>
+
+</section>
+
+
+<main>
+
+<section class="radar-box">
+
+  <div class="radar-title">
+
+    <div>
+      <h2>LIVE RADAR</h2>
+    </div>
+
+    <span id="scanState">
+      WAITING
+    </span>
+
+  </div>
+
+  <div class="canvas-container">
+
+    <canvas id="radar"></canvas>
+
+  </div>
+
+</section>
+
+
+<aside class="sidebar">
+
+  <section class="panel">
+
+    <h3>LIVE DATA</h3>
+
+    <div class="value">
+
+      <small>ANGLE</small>
+
+      <strong id="angle">
+        90°
+      </strong>
+
+    </div>
+
+    <div class="value">
+
+      <small>DISTANCE</small>
+
+      <strong id="distance">
+        --
+      </strong>
+
+    </div>
+
+    <div class="value">
+
+      <small>OBJECT</small>
+
+      <strong
+        id="object"
+        class="green"
+      >
+        CLEAR
+      </strong>
+
+    </div>
+
+    <div class="value">
+
+      <small>PACKETS</small>
+
+      <strong id="packets">
+        0
+      </strong>
+
+    </div>
+
+  </section>
+
+
+  <section class="panel">
+
+    <h3>HARDWARE</h3>
+
+    <div class="hardware-row">
+      <span>Sensor</span>
+      <b>HC-SR04</b>
+    </div>
+
+    <div class="hardware-row">
+      <span>Servo</span>
+      <b>SG90</b>
+    </div>
+
+    <div class="hardware-row">
+      <span>TRIG</span>
+      <b>D9</b>
+    </div>
+
+    <div class="hardware-row">
+      <span>ECHO</span>
+      <b>D10</b>
+    </div>
+
+    <div class="hardware-row">
+      <span>SERVO</span>
+      <b>D6</b>
+    </div>
+
+  </section>
+
+
+  <section class="panel">
+
+    <h3>CONNECTION LOG</h3>
+
+    <div id="log"></div>
+
+  </section>
+
+</aside>
+
+</main>
+
+
+<footer>
+
+  <span>
+    HC-SR04 + SG90 + Arduino Uno
+  </span>
+
+  <span>
+    115200 Baud
+  </span>
+
+</footer>
+
+</div>
+
+
+<script>
+
+/*
+====================================================
+ARDUINO RADAR WEB GUI
+====================================================
+*/
+
+const BAUD_RATE = 115200;
+
+let port = null;
+let reader = null;
+
+let connected = false;
+
+let angle = 90;
+let distance = 0;
+
+let packetCount = 0;
+
+const points = new Map();
+
+
+/*
+====================================================
+ELEMENTS
+====================================================
+*/
+
+const canvas =
+  document.getElementById("radar");
+
+const ctx =
+  canvas.getContext("2d");
+
+
+const connectButton =
+  document.getElementById("connect");
+
+const disconnectButton =
+  document.getElementById("disconnect");
+
+const connectionDot =
+  document.getElementById(
+    "connectionDot"
+  );
+
+const connectionText =
+  document.getElementById(
+    "connectionText"
+  );
+
+const scanState =
+  document.getElementById(
+    "scanState"
+  );
+
+const angleElement =
+  document.getElementById(
+    "angle"
+  );
+
+const distanceElement =
+  document.getElementById(
+    "distance"
+  );
+
+const objectElement =
+  document.getElementById(
+    "object"
+  );
+
+const packetElement =
+  document.getElementById(
+    "packets"
+  );
+
+const thresholdElement =
+  document.getElementById(
+    "threshold"
+  );
+
+const maxRangeElement =
+  document.getElementById(
+    "maxRange"
+  );
+
+const logElement =
+  document.getElementById("log");
+
+
+/*
+====================================================
+LOG
+====================================================
+*/
+
+function log(message, type = "") {
+
+  const line =
+    document.createElement("div");
+
+  line.textContent =
+    new Date().toLocaleTimeString() +
+    "  " +
+    message;
+
+  if (type === "error") {
+    line.className = "log-error";
+  }
+
+  if (type === "ok") {
+    line.className = "log-ok";
+  }
+
+  logElement.appendChild(line);
+
+  logElement.scrollTop =
+    logElement.scrollHeight;
+
+}
+
+
+/*
+====================================================
+CONNECT
+====================================================
+*/
+
+connectButton.onclick =
+  async function () {
+
+    log("Requesting serial port...");
+
+    if (!("serial" in navigator)) {
+
+      log(
+        "Web Serial is not supported.",
+        "error"
+      );
+
+      alert(
+        "Web Serial is not supported.\n\n" +
+        "Use Chrome or Edge on a desktop computer."
+      );
+
+      return;
+    }
+
+
+    try {
+
+      port =
+        await navigator.serial.requestPort();
+
+
+      log(
+        "Serial port selected.",
+        "ok"
+      );
+
+
+      await port.open({
+        baudRate: BAUD_RATE
+      });
+
+
+      connected = true;
+
+
+      connectionText.textContent =
+        "CONNECTED";
+
+      connectionDot.classList.add(
+        "connected"
+      );
+
+
+      connectButton.disabled = true;
+
+      disconnectButton.disabled = false;
+
+
+      scanState.textContent =
+        "SCANNING";
+
+
+      log(
+        "Arduino connected at 115200 baud.",
+        "ok"
+      );
+
+
+      readSerial();
+
+
+    } catch (error) {
+
+      log(
+        "Connection failed: " +
+        error.message,
+        "error"
+      );
+
+      console.error(error);
+
+    }
+
+  };
+
+
+/*
+====================================================
+DISCONNECT
+====================================================
+*/
+
+disconnectButton.onclick =
+  async function () {
+
+    connected = false;
+
+
+    try {
+
+      if (reader) {
+
+        await reader.cancel();
+
+        reader.releaseLock();
+
+        reader = null;
+
+      }
+
+
+      if (port) {
+
+        await port.close();
+
+        port = null;
+
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+
+    connectionText.textContent =
+      "DISCONNECTED";
+
+
+    connectionDot.classList.remove(
+      "connected"
+    );
+
+
+    connectButton.disabled = false;
+
+    disconnectButton.disabled = true;
+
+
+    scanState.textContent =
+      "WAITING";
+
+
+    log(
+      "Arduino disconnected."
+    );
+
+  };
+
+
+/*
+====================================================
+SERIAL READER
+====================================================
+*/
+
+async function readSerial() {
+
+  if (!port) {
+    return;
+  }
+
+
+  let buffer = "";
+
+
+  try {
+
+    while (
+      connected &&
+      port.readable
+    ) {
+
+      reader =
+        port.readable.getReader();
+
+
+      try {
+
+        while (connected) {
+
+          const {
+            value,
+            done
+          } =
+            await reader.read();
+
+
+          if (done) {
+            break;
+          }
+
+
+          if (value) {
+
+            const text =
+              new TextDecoder()
+                .decode(value);
+
+
+            buffer += text;
+
+
+            const lines =
+              buffer.split(/\r?\n/);
+
+
+            buffer =
+              lines.pop();
+
+
+            for (
+              const line of lines
+            ) {
+
+              processLine(
+                line.trim()
+              );
+
+            }
+
+          }
+
+        }
+
+      } finally {
+
+        reader.releaseLock();
+
+        reader = null;
+
+      }
+
+      break;
+
+    }
+
+  } catch (error) {
+
+    log(
+      "Serial read error: " +
+      error.message,
+      "error"
+    );
+
+    console.error(error);
+
+  }
+
+}
+
+
+/*
+====================================================
+PROCESS ARDUINO LINE
+====================================================
+
+Expected:
+
+45,72.5
+
+====================================================
+*/
+
+function processLine(line) {
+
+  if (!line) {
+    return;
+  }
+
+
+  console.log(
+    "Arduino:",
+    line
+  );
+
+
+  const parts =
+    line.split(",");
+
+
+  if (parts.length !== 2) {
+
+    return;
+
+  }
+
+
+  const newAngle =
+    parseFloat(parts[0]);
+
+  const newDistance =
+    parseFloat(parts[1]);
+
+
+  if (
+    Number.isNaN(newAngle) ||
+    Number.isNaN(newDistance)
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    newAngle < 0 ||
+    newAngle > 180
+  ) {
+
+    return;
+
+  }
+
+
+  angle =
+    newAngle;
+
+  distance =
+    newDistance;
+
+
+  packetCount++;
+
+
+  points.set(
+    Math.round(angle),
+    distance
+  );
+
+
+  /*
+   * Prevent unlimited memory growth.
+   */
+
+  if (points.size > 181) {
+
+    const firstKey =
+      points.keys().next().value;
+
+    points.delete(firstKey);
+
+  }
+
+
+  updateUI();
+
+  drawRadar();
+
+}
+
+
+/*
+====================================================
+UPDATE UI
+====================================================
+*/
+
+function updateUI() {
+
+  const threshold =
+    parseFloat(
+      thresholdElement.value
+    );
+
+
+  angleElement.textContent =
+    Math.round(angle) + "°";
+
+
+  if (distance >= 400) {
+
+    distanceElement.textContent =
+      "OUT";
+
+  } else {
+
+    distanceElement.textContent =
+      distance.toFixed(1) + " cm";
+
+  }
+
+
+  packetElement.textContent =
+    packetCount;
+
+
+  if (distance <= threshold) {
+
+    objectElement.textContent =
+      "DETECTED";
+
+    objectElement.className =
+      "red";
+
+  } else {
+
+    objectElement.textContent =
+      "CLEAR";
+
+    objectElement.className =
+      "green";
+
+  }
+
+}
+
+
+/*
+====================================================
+CANVAS
+====================================================
+*/
+
+function resizeCanvas() {
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+
+  const ratio =
+    window.devicePixelRatio || 1;
+
+
+  canvas.width =
+    rect.width * ratio;
+
+  canvas.height =
+    rect.height * ratio;
+
+
+  ctx.setTransform(
+    ratio,
+    0,
+    0,
+    ratio,
+    0,
+    0
+  );
+
+
+  drawRadar();
+
+}
+
+
+window.addEventListener(
+  "resize",
+  resizeCanvas
+);
+
+
+/*
+====================================================
+RADAR
+====================================================
+*/
+
+function drawRadar() {
+
+  const width =
+    canvas.clientWidth;
+
+  const height =
+    canvas.clientHeight;
+
+
+  if (!width || !height) {
+    return;
+  }
+
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  /*
+   * Background
+   */
+
+  ctx.fillStyle =
+    "#061018";
+
+  ctx.fillRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  const centerX =
+    width / 2;
+
+  const centerY =
+    height * 0.88;
+
+
+  const radius =
+    Math.min(
+      width * 0.44,
+      height * 0.76
+    );
+
+
+  const maxRange =
+    parseFloat(
+      maxRangeElement.value
+    );
+
+
+  /*
+   * Radar rings
+   */
+
+  for (
+    let i = 1;
+    i <= 4;
+    i++
+  ) {
+
+    const r =
+      radius * i / 4;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      centerX,
+      centerY,
+      r,
+      Math.PI,
+      Math.PI * 2
+    );
+
+
+    ctx.strokeStyle =
+      "#17404c";
+
+    ctx.lineWidth = 1;
+
+    ctx.stroke();
+
+
+    ctx.fillStyle =
+      "#68818b";
+
+    ctx.font =
+      "10px Arial";
+
+
+    ctx.fillText(
+      Math.round(
+        maxRange * i / 4
+      ) + " cm",
+
+      centerX + 7,
+
+      centerY - r - 5
+    );
+
+  }
+
+
+  /*
+   * Angle lines
+   */
+
+  for (
+    let a = 0;
+    a <= 180;
+    a += 30
+  ) {
+
+    const rad =
+      a * Math.PI / 180;
+
+
+    const x =
+      centerX -
+      radius *
+      Math.cos(rad);
+
+
+    const y =
+      centerY -
+      radius *
+      Math.sin(rad);
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+      centerX,
+      centerY
+    );
+
+
+    ctx.lineTo(
+      x,
+      y
+    );
+
+
+    ctx.strokeStyle =
+      "#17404c";
+
+    ctx.stroke();
+
+
+    ctx.fillStyle =
+      "#68818b";
+
+    ctx.font =
+      "10px Arial";
+
+
+    const labelRadius =
+      radius + 20;
+
+
+    const lx =
+      centerX -
+      labelRadius *
+      Math.cos(rad);
+
+
+    const ly =
+      centerY -
+      labelRadius *
+      Math.sin(rad);
+
+
+    ctx.textAlign =
+      "center";
+
+    ctx.fillText(
+      a + "°",
+      lx,
+      ly
+    );
+
+  }
+
+
+  /*
+   * Detection range
+   */
+
+  const threshold =
+    parseFloat(
+      thresholdElement.value
+    );
+
+
+  const detectionRadius =
+    Math.min(
+      threshold / maxRange,
+      1
+    ) * radius;
+
+
+  ctx.beginPath();
+
+
+  ctx.arc(
+    centerX,
+    centerY,
+    detectionRadius,
+    Math.PI,
+    Math.PI * 2
+  );
+
+
+  ctx.strokeStyle =
+    "#ffd166";
+
+  ctx.lineWidth = 1;
+
+  ctx.stroke();
+
+
+  /*
+   * Historical points
+   */
+
+  points.forEach(
+    (dist, a) => {
+
+      if (
+        dist <= 0 ||
+        dist >= maxRange
+      ) {
+        return;
+      }
+
+
+      const rad =
+        a * Math.PI / 180;
+
+
+      const r =
+        dist / maxRange *
+        radius;
+
+
+      const x =
+        centerX -
+        r *
+        Math.cos(rad);
+
+
+      const y =
+        centerY -
+        r *
+        Math.sin(rad);
+
+
+      const detected =
+        dist <= threshold;
+
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+        x,
+        y,
+        detected ? 4 : 3,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.fillStyle =
+        detected
+          ? "#ff4055"
+          : "#00ff9d";
+
+
+      ctx.fill();
+
+    }
+  );
+
+
+  /*
+   * Current sweep
+   */
+
+  const currentRad =
+    angle * Math.PI / 180;
+
+
+  const sweepX =
+    centerX -
+    radius *
+    Math.cos(currentRad);
+
+
+  const sweepY =
+    centerY -
+    radius *
+    Math.sin(currentRad);
+
+
+  ctx.beginPath();
+
+
+  ctx.moveTo(
+    centerX,
+    centerY
+  );
+
+
+  ctx.lineTo(
+    sweepX,
+    sweepY
+  );
+
+
+  ctx.strokeStyle =
+    "#00ff9d";
+
+  ctx.lineWidth = 2;
+
+  ctx.shadowColor =
+    "#00ff9d";
+
+  ctx.shadowBlur = 12;
+
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+
+
+  /*
+   * Current object
+   */
+
+  if (
+    distance > 0 &&
+    distance < maxRange
+  ) {
+
+    const r =
+      distance / maxRange *
+      radius;
+
+
+    const x =
+      centerX -
+      r *
+      Math.cos(currentRad);
+
+
+    const y =
+      centerY -
+      r *
+      Math.sin(currentRad);
+
+
+    const detected =
+      distance <= threshold;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+      x,
+      y,
+      detected ? 9 : 7,
+      0,
+      Math.PI * 2
+    );
+
+
+    ctx.fillStyle =
+      detected
+        ? "#ff4055"
+        : "#00ff9d";
+
+
+    ctx.shadowColor =
+      detected
+        ? "#ff4055"
+        : "#00ff9d";
+
+
+    ctx.shadowBlur = 20;
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+
+    ctx.fillStyle =
+      "white";
+
+    ctx.font =
+      "bold 11px Arial";
+
+    ctx.textAlign =
+      "left";
+
+
+    ctx.fillText(
+      distance.toFixed(1) + " cm",
+      x + 12,
+      y - 8
+    );
+
+  }
+
+
+  /*
+   * Sensor
+   */
+
+  ctx.beginPath();
+
+
+  ctx.arc(
+    centerX,
+    centerY,
+    5,
+    0,
+    Math.PI * 2
+  );
+
+
+  ctx.fillStyle =
+    "#00ff9d";
+
+  ctx.fill();
+
+}
+
+
+/*
+====================================================
+INPUT
+====================================================
+*/
+
+thresholdElement.addEventListener(
+  "input",
+  function () {
+
+    updateUI();
+
+    drawRadar();
+
+  }
+);
+
+
+maxRangeElement.addEventListener(
+  "change",
+  function () {
+
+    drawRadar();
+
+  }
+);
+
+
+/*
+====================================================
+INITIALIZE
+====================================================
+*/
+
+resizeCanvas();
+
+updateUI();
+
+log(
+  "Radar GUI loaded.",
+  "ok"
+);
+
+if (!("serial" in navigator)) {
+
+  log(
+    "Web Serial unavailable. Use Chrome/Edge desktop.",
+    "error"
+  );
+
+}
+
+</script>
+
+</body>
+</html>
