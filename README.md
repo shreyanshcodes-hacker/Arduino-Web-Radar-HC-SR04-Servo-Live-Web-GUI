@@ -5,6 +5,7 @@ A real-time **Arduino-based radar system** using an **HC-SR04 ultrasonic sensor*
 ## 🚀 Demo
 
 The system provides a live visualization of:
+![App Demo](/Demo/demo.mp4)
 
 * 📐 Current scanning angle
 * 📏 Measured object distance
